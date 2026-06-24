@@ -1,10 +1,140 @@
 # CodePath AI301 Contribution README: Basil Thomas
 
 **Cohort:** AI301 Summer 2026, Section 1C (Wednesdays 4 to 6 PM PT)
-**Cycle:** 1
-**Status:** Phase II Complete
+
+| Cycle | Issue | Status |
+|-------|-------|--------|
+| 1 | [apache/burr #276](https://github.com/apache/burr/issues/276) — link read/write state on telemetry UI | Paused at Phase II — maintainer unresponsive; pivoted to Cycle 2 |
+| 2 | [actualbudget/actual #7391](https://github.com/actualbudget/actual/issues/7391) — scoped ErrorBoundaries (mobile) | **Phase III Complete** |
 
 ---
+
+# Cycle 2 — actual #7391: Mobile ErrorBoundaries
+
+**Issue:** [actualbudget/actual #7391 — Add scoped ErrorBoundaries to mobile pages](https://github.com/actualbudget/actual/issues/7391)
+**Repository:** [actualbudget/actual](https://github.com/actualbudget/actual) — local-first personal finance app (TypeScript/React, Yarn 4 monorepo, MIT)
+**My fork:** https://github.com/BasilTh/actual
+**Work branch:** [`fix-issue-7391`](https://github.com/BasilTh/actual/tree/fix-issue-7391)
+**Status:** Phase III Complete — 8 commits pushed, working tree clean; PR pending my personal write-up
+
+---
+
+## Phase I (Cycle 2): Why I Chose This Issue
+
+After Cycle 1 (apache/burr #276) stalled — the maintainer never answered my intro
+questions and another contributor had already expressed interest — I pivoted to a
+live, maintainer-engaged issue instead of waiting. actual/#7391 is a textbook fit:
+
+- **Squarely my stack.** A pure React + TypeScript frontend change (no backend or
+  data-model work), exactly the territory I work in daily.
+- **Maintainer-scoped and engaged.** The umbrella issue spans every feature area
+  (70+ historical fatal-crash reports). I claimed the mobile half on the issue
+  thread, and the maintainer (@MatissJanis) confirmed "one PR is fine" for all
+  mobile pages — so the scope is bounded and pre-approved rather than speculative.
+- **A proven, repeatable pattern.** The repo already merged the same fix for other
+  surfaces (#7658 report charts, #7437 rules, #7560 modals, #7497
+  budget/accounts/transactions, #7382 widgets), so there's a clear convention to
+  match rather than invent.
+
+---
+
+## Phase II (Cycle 2): Reproduction & Plan
+
+**The bug:** Actual has only two top-level `ErrorBoundary` wrappers (in `App.tsx`)
+plus one report-scoped boundary. A render error *anywhere* in a mobile feature page
+therefore unmounts the whole app to a full-screen "Fatal Error," losing the user's
+context.
+
+**Reproduction (baseline on `master`):** In the demo budget at a mobile viewport
+(<512px, `breakpoints.small`), I confirmed the fatal-screen behavior by injecting a
+temporary `throw new Error('test')` into a mobile page's render and observing the
+full-app crash. Before/after captures will be attached to the PR.
+
+**Plan:** Wrap each mobile feature page in a scoped `ErrorBoundary` (from
+`react-error-boundary`, already a v6.0.3 dependency) using the shared
+`FeatureErrorFallback` and `resetKeys={[location.pathname]}`, placed **inside** the
+page chrome so the mobile header and nav tabs survive a contained crash — one commit
+per feature area. Full plan: `.planning/actual/PLAN_7391.md` (local).
+
+---
+
+## Phase III (Cycle 2): Implementation
+
+### Implementation Notes — Week 3 Progress
+
+**What I built:** scoped error boundaries around every mobile feature page, so a
+render error is contained to that section (showing a recoverable "Try again"
+fallback) instead of crashing the entire app.
+
+- **New shared helper** — `packages/desktop-client/src/components/mobile/MobilePageBoundary.tsx`:
+  wraps `ErrorBoundary` with `FallbackComponent={FeatureErrorFallback}` and
+  `resetKeys={[useLocation().pathname]}`, so navigating away clears the error.
+- **Wrapped the mobile feature pages** — transactions, budget, accounts,
+  transaction-edit, schedules, payees, and bank-sync — placing each boundary
+  *inside* the page chrome so `MobilePageHeader` + `MobileNavTabs` stay alive when a
+  section crashes.
+- **Matched existing convention exactly:** no `onError` wiring (the merged
+  precedents don't use it), reused `FeatureErrorFallback` for consistency, added no
+  throwaway files.
+
+**Challenges / decisions:**
+- **Boundary placement.** A route-element boundary would have killed the nav bar on
+  crash (the `Page` component portals its header). Placing the boundary inside page
+  chrome keeps header + nav interactive — verified per area.
+- **Test needed a router.** The new boundary calls `useLocation()`, so
+  `MobilePayeesPage.test.tsx` started failing for lack of router context; I wrapped
+  its render in `<MemoryRouter>` to fix it.
+- **Windows lint trap.** `yarn lint:fix` CRLF-rewrites thousands of files on my
+  machine, so I rely on CI's oxlint/oxfmt rather than the local autofix.
+
+### Code Changes
+
+- **Branch:** https://github.com/BasilTh/actual/tree/fix-issue-7391 — 8 commits,
+  working tree clean.
+- **Files:** 13 changed (+558 / −498). New `MobilePageBoundary.tsx`; boundaries
+  added to `AccountsPage`, `BudgetPage`, `TransactionListWithBalances`,
+  `TransactionEdit`, `MobileSchedulesPage` + `MobileScheduleEditPage`,
+  `MobilePayeesPage` + `MobilePayeeEditPage`, `MobileBankSyncPage` +
+  `MobileBankSyncAccountEditPage`; test fix in `MobilePayeesPage.test.tsx`; release
+  note `upcoming-release-notes/7391.md`.
+- **Key commits:**
+  - `d01c02b` Add scoped ErrorBoundary to mobile transaction list
+  - `3ac1e3a` Wrap mobile budget page table in a scoped ErrorBoundary
+  - `f9170b3` Wrap mobile accounts list in a scoped ErrorBoundary
+  - `ed12062` Wrap mobile transaction edit in a scoped ErrorBoundary
+  - `2eb8293` Wrap mobile schedules pages in scoped ErrorBoundaries
+  - `33e9941` Wrap mobile payees pages in scoped ErrorBoundaries
+  - `df17193` Wrap mobile bank-sync pages in scoped ErrorBoundaries
+  - `ba4aaba` Add release note for mobile error boundaries
+
+### Testing Strategy
+
+- **Manual, per area:** at a mobile viewport, inject a temporary `throw` into each
+  wrapped page → confirm the contained `FeatureErrorFallback` renders while the
+  header/nav stay live → confirm "Try again" (`resetErrorBoundary` keyed on
+  `pathname`) recovers → remove the throw → commit.
+- **Unit:** updated `MobilePayeesPage.test.tsx` to render inside `<MemoryRouter>` so
+  the boundary's `useLocation()` resolves.
+- **Gates (verified locally):** `yarn typecheck` clean across all 10 packages
+  (0 errors); `yarn workspace @actual-app/web run test` green — **42 files, 686
+  passed / 1 skipped / 0 failed**, including the updated `MobilePayeesPage.test.tsx`.
+  `yarn lint` is left to CI (local `lint:fix` CRLF-rewrites the tree on Windows).
+  CI on the PR also runs the 9 `*.mobile.test.ts` Playwright suites (350×600
+  viewport) and the VRT shards that mobile changes trigger.
+
+### What's left (→ Phase IV)
+
+Open the PR to actualbudget/actual personally — normal title (no `[AI]` prefix),
+human-written description + AI-disclosure line, leaving the template untouched —
+then rename `upcoming-release-notes/7391.md` to the PR number and respond to review.
+
+---
+
+# Cycle 1 — apache/burr #276: link read/write state on telemetry UI
+
+> **Status: paused at Phase II.** Pivoted build effort to Cycle 2 (above) after the
+> maintainer went unresponsive. Phase I + II below are preserved as the documented
+> Cycle 1 journey.
 
 ## The Issue
 
@@ -197,8 +327,9 @@ default test tooling (`react-scripts test`, testing-library) but no existing
 test files to extend, and the change is frontend-only, so the Python test
 suite is unaffected.
 
-## Phase III: Implementation
-_To be filled in during Weeks 3+._
+## Phase III & IV (Cycle 1)
 
-## Phase IV: Pull Request & Iteration
-_To be filled in during Weeks 4+._
+_Not completed for Cycle 1. The burr maintainer (@elijahbenizzy) never responded to
+my Phase I intro questions and a prior contributor (@hannguyen0712) had expressed
+interest, so I pivoted my build effort to [Cycle 2 (actual #7391)](#cycle-2--actual-7391-mobile-errorboundaries).
+I'll reopen burr #276 if the maintainer re-engages._
