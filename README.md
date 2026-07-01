@@ -2,7 +2,7 @@
 
 **Cohort:** AI301 Summer 2026, Section 1C (Wednesdays 4 to 6 PM PT)
 **Cycle:** 2 — switched open source project (see note below)
-**Status:** Phase III Complete
+**Status:** Phase IV In Progress — pre-submission checks complete; opening the upstream PR next
 
 ---
 
@@ -245,9 +245,26 @@ fallback) instead of crashing the entire app.
 
 ## Phase IV: Pull Request & Iteration
 
-_In progress._ Opening the PR to actualbudget/actual personally — a normal title (no
-`[AI]` prefix, per the project's AI-usage policy for human-reviewed work), a
-human-written description plus an AI-disclosure line, leaving the PR template
-untouched. Once the PR number exists, rename `upcoming-release-notes/7391.md` →
-`<PR#>.md`. Then keep the branch current with `master` and respond to maintainer
-review personally.
+_In progress (submitting)._
+
+**Final pre-submission checks (June 30).** Re-verified the branch is review-ready:
+the diff against `upstream/master` is scoped to exactly the intended 13 files
+(+558 / −498) with no stray, debug, or formatting-only changes; `yarn typecheck` is
+clean across all packages and the desktop-client unit suite is green (686 passed /
+1 skipped). The only working-tree noise is Windows CRLF phantoms (no real content
+change), which stay out of the commits.
+
+**One item to resolve before opening.** The branch is now 68 commits behind
+`master`. It still applies cleanly except for a single conflict in
+`mobile/transactions/TransactionEdit.tsx`, which upstream changed since I branched
+(mobile amount-input → calculator #8200, nearby-payee focus fix #8196, append/prepend
+notes on new transactions #8300). Plan: rebase onto the latest `master`, re-resolve
+that one file, and re-test the boundary so the PR opens conflict-free.
+
+**PR plan.** Open the PR personally with a normal title (no `[AI]` prefix), filling
+out the project's PR template — Description / Related issue(s) / Testing / Checklist —
+with a human-written description and an explicit AI-disclosure line per the project's
+[AI-usage policy](https://actualbudget.org/docs/contributing/ai-usage-policy). After
+the PR number exists, rename `upcoming-release-notes/7391.md` → `<PR#>.md` (the repo
+names release notes by PR number). Then keep the branch current with `master` and
+respond to maintainer review personally.
