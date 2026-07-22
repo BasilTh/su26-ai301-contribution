@@ -2,7 +2,7 @@
 
 **Cohort:** AI301 Summer 2026, Section 1C (Wednesdays 4 to 6 PM PT)
 **Cycle:** 2 — switched open source project (see note below)
-**Status:** Phase IV In Progress — pre-submission checks complete; opening the upstream PR next
+**Status:** Phase IV In Progress — PR opened: [actualbudget/actual #8547](https://github.com/actualbudget/actual/pull/8547); CI running, awaiting maintainer review. (Out sick July 8–~20; resubmitted a re-scoped change.)
 
 ---
 
@@ -17,6 +17,17 @@
 
 ---
 
+> **Update (week of July 21) — scope narrowed after part of it merged upstream.** I was
+> out sick from July 8 for about two weeks and could not work. While I was out, **PR
+> [#8336](https://github.com/actualbudget/actual/pull/8336) merged (July 3)** and added
+> scoped ErrorBoundaries to the mobile **budget, accounts, and transaction** pages — part
+> of my original mobile scope. When I came back I re-checked `master` and the issue and
+> confirmed the mobile **schedules, payees, and bank sync** routes were still unwrapped and
+> unclaimed, so I re-scoped my contribution to exactly those three areas and matched the
+> route-level pattern #8336 used. This README reflects that re-scoped change.
+
+---
+
 ## The Issue
 
 **Issue:** [actualbudget/actual #7391 — [Maintenance] Add scoped ErrorBoundaries to isolate feature-level crashes](https://github.com/actualbudget/actual/issues/7391)
@@ -25,9 +36,10 @@ local-first, open-source personal finance app (TypeScript/React, Yarn 4 monorepo
 MIT license)
 **Labels:** `good first issue`, `help wanted`, `tech debt`, `maintenance`
 **My fork:** https://github.com/BasilTh/actual
-**Work branch:** `fix-issue-7391`
-**My scope:** the **mobile** pages (the issue is the umbrella tracker for all
-platforms and stays open after my PR)
+**Work branch:** `fix-7391-mobile-schedules-payees-banksync`
+**My scope (re-scoped):** the mobile **schedules**, **payees**, and **bank sync** pages —
+the mobile entries in the issue's table that still had no boundary after #8336. The issue
+is the umbrella tracker for all platforms and stays open after my PR.
 
 ---
 
@@ -44,7 +56,8 @@ The maintainers documented this as a recurring pattern: 70+ open and closed issu
 are fatal crashes that a feature-scoped boundary would have contained. The fix is to
 wrap each major feature area in its own `ErrorBoundary` (from `react-error-boundary`,
 already a dependency) that shows a contextual, recoverable fallback instead of
-crashing the app. This issue is the umbrella; I'm taking the **mobile** slice.
+crashing the app. This issue is the umbrella; I took the **mobile** slice, and after
+#8336 merged the remaining mobile work is schedules, payees, and bank sync.
 
 ---
 
@@ -64,8 +77,9 @@ needed a live, engaged issue rather than a waiting game. actual/#7391 is a tight
 
 3. **A proven, repeatable pattern.** The repo already merged the same fix for other
    surfaces (#7658 report charts, #7437 rules, #7560 modals, #7497
-   budget/accounts/transactions, #7382 widgets), so there's a clear convention to
-   match rather than invent.
+   budget/accounts/transactions, #7382 widgets, and #8336 for mobile
+   budget/accounts/transactions), so there's a clear convention to match rather than
+   invent.
 
 4. **Real-world OSS practice.** A large, active monorepo with CI, visual-regression
    tests, a contribution guide, and an explicit AI-usage policy — exactly the
@@ -93,178 +107,184 @@ needed a live, engaged issue rather than a waiting game. actual/#7391 is a tight
 
 Stack: TypeScript/React monorepo (Yarn 4 workspaces), Node ≥ 22.
 
-1. Forked actualbudget/actual; rewired the existing clone —
-   `git remote rename origin upstream`, then
-   `git remote add origin https://github.com/BasilTh/actual.git`.
-2. Branch: `git checkout -b fix-issue-7391`.
+1. Forked actualbudget/actual; `origin` = my fork, `upstream` = actualbudget/actual.
+2. Branch: `fix-7391-mobile-schedules-payees-banksync` off the latest `master`.
 3. Toolchain: Node ≥ 22 (`.nvmrc` = v22), `corepack enable` for Yarn 4, then
-   `yarn install` from the repo root (Husky hooks install via `prepare`).
-4. Run: `yarn start` (Vite dev server, port 3001). **Windows flag:** `yarn start`
-   chains a POSIX shell script, so it needs Git Bash `sh` on PATH; fallback is
-   `yarn workspace @actual-app/web run start --mode=browser`.
-5. In the app: "Don't use a server" → **View demo** (a pre-populated budget). Mobile
-   emulation via DevTools viewport < 512px (`breakpoints.small`).
+   `yarn install` from the repo root.
+4. Run: `yarn start` (Vite dev server, port 3001).
+5. In the app: "Don't use a server" → **Try the demo** (a pre-populated budget). Mobile
+   emulation via a viewport < 512px (`breakpoints.small`).
 
 #### Steps to Reproduce
 
-On `master`, the fatal-crash behavior:
+On `master`, the fatal-crash behavior for the still-unwrapped mobile routes:
 
 1. Open the demo budget and switch to a mobile viewport (< 512px).
-2. Trigger a render error inside a mobile feature page — either one of the issue's
-   linked mobile crashes (#7108, #6650, #6467, #5692, #4204, #3263) where still
-   reproducible, or a temporary `throw new Error('test')` injected into a mobile
-   page's render as a deterministic baseline.
+2. Trigger a render error inside mobile schedules, payees, or bank sync — a temporary
+   `throw new Error('test')` injected into that page's render is a deterministic baseline.
 3. **Expected (desired):** the error is contained to that section with a recoverable
    fallback, header and nav intact.
-4. **Actual:** the whole app unmounts to the full-screen "Fatal Error" and the user
-   loses all context.
+4. **Actual (before the fix):** the whole app unmounts to the full-screen "Fatal Error."
 
 #### Reproduction Evidence
 
-- **Working branch:** https://github.com/BasilTh/actual/tree/fix-issue-7391
-- **Baseline:** confirmed the full-app crash by injecting a temporary `throw` into a
-  mobile page at a mobile viewport; before/after captures will be attached to the PR.
-- **Findings:** the app has only two top-level boundaries + one report boundary, so
-  nothing contains a mobile feature crash. `react-error-boundary` (v6.0.3) and a
-  shared `FeatureErrorFallback` already exist and are used by the merged desktop
-  boundaries — so this is a pure rendering/composition change, no backend or
-  data-model work.
+- **Working branch:** https://github.com/BasilTh/actual/tree/fix-7391-mobile-schedules-payees-banksync
+- **Baseline:** confirmed the full-app crash by injecting a temporary `throw` into
+  `MobileSchedulesPage` at a mobile viewport; contained after the fix (see Testing).
+- **Findings:** on `master`, `/schedules`, `/schedules/:id`, `/payees`, `/payees/:id`,
+  `/bank-sync`, and `/bank-sync/account/:accountId/edit` in `FinancesApp.tsx` are bare
+  route elements with no boundary, while `/budget`, `/accounts/:id`,
+  `/transactions/:transactionId` (from #8336) and `/rules` are already wrapped.
+  `react-error-boundary` and the shared `FeatureErrorFallback` already exist — so this is
+  a pure rendering/composition change, no backend or data-model work.
 
 ### Solution Approach
 
 #### Analysis
 
-The crash propagates because there is no boundary between a mobile feature page and
-the app root. The merged desktop fixes (reports, rules, modals,
-budget/accounts/transactions, widgets) show the intended pattern: wrap each feature
-in an `ErrorBoundary` using the shared `FeatureErrorFallback`, with `resetKeys` so
-navigation clears the error. The mobile pages simply hadn't been done yet. One
-subtlety: the mobile `Page` component *portals* its header, so a boundary placed at
-the route element would also kill the header/nav on crash — the boundary must sit
-*inside* the page chrome.
+The crash propagates because there is no boundary between a mobile feature route and
+the app root. The merged fixes — including the just-landed mobile boundaries (#8336) and
+the rules boundaries — show the intended pattern: wrap the **route element** in
+`FinancesApp.tsx` in an `ErrorBoundary` using the shared `FeatureErrorFallback` with
+`resetKeys={[location.pathname]}` so navigation clears the error. Schedules, payees, and
+bank sync simply hadn't been done yet.
 
-#### Implementation Plan
+#### Implementation Plan (UMPIRE)
 
-Using the UMPIRE framework (adapted):
+**Understand:** A render error in mobile schedules/payees/bank sync crashes the entire
+app; it should instead be contained to that section with a recoverable fallback, while
+the mobile header and nav tabs stay alive.
 
-**Understand:** A render error in any mobile feature page crashes the entire app; it
-should instead be contained to that page with a recoverable fallback, while the
-mobile header and nav tabs stay alive.
-
-**Match:** `react-error-boundary` v6.0.3 is already a dependency; `FeatureErrorFallback`
-and the `resetKeys={[location.pathname]}` pattern are already used by the merged
-desktop boundaries (e.g. the report boundary). I match that convention exactly
-rather than inventing a new one.
+**Match:** `react-error-boundary` v6 is already a dependency; `FeatureErrorFallback` and
+`resetKeys={[location.pathname]}` are already used by the merged `/budget` and `/rules`
+boundaries. Match that convention exactly rather than inventing a new one.
 
 **Plan:**
-1. Add a shared `MobilePageBoundary` helper that wraps `ErrorBoundary` with
-   `FallbackComponent={FeatureErrorFallback}` and `resetKeys={[useLocation().pathname]}`.
-2. Wrap each mobile feature page *inside* its page chrome — transactions, budget,
-   accounts, transaction-edit, schedules, payees, bank sync — one commit per area.
-3. No `onError` wiring (the merged precedents don't use it; match real convention).
-4. Add a release note under `upcoming-release-notes/`.
+1. Wrap the six mobile routes in `FinancesApp.tsx` (`/schedules`, `/schedules/:id`,
+   `/payees`, `/payees/:id`, `/bank-sync`, `/bank-sync/account/:accountId/edit`) in an
+   `ErrorBoundary` with `FallbackComponent={FeatureErrorFallback}` and
+   `resetKeys={[location.pathname]}`.
+2. Add a release note under `upcoming-release-notes/`.
 
-**Implement:** done on `fix-issue-7391` — 8 commits, working tree clean (see
+**Implement:** done on `fix-7391-mobile-schedules-payees-banksync` — one commit (see
 Phase III).
 
-**Review:** self-review against repo conventions — TS-strict (no `@ts-strict-ignore`
-on new files), reuse `FeatureErrorFallback`, no throwaway files, diff scoped to the
-issue, descriptive commit messages, and the PR write-up left to me personally per the
-project's AI-usage policy.
+**Review:** self-review against repo conventions — reuse `FeatureErrorFallback`, match
+the merged route-level pattern, no throwaway files, diff scoped to the issue, `[AI]`-free
+human PR (I author the PR text myself) per the project's AI-usage policy, with an explicit
+AI-disclosure line.
 
-**Evaluate:** per-area manual throw test at a mobile viewport (contained fallback +
-live header/nav + "Try again" reset), plus `yarn typecheck` and the desktop-client
-unit suite (see Testing Strategy below).
+**Evaluate:** manual crash/recovery test at a mobile viewport plus `yarn typecheck` (see
+Testing Strategy).
+
+**Design decision — route-level vs inside-page-chrome.** I first implemented these
+boundaries *inside* each page's chrome, worried that a route-level boundary would kill the
+mobile nav (the `Page` component portals its header). On re-checking `master` I saw #8336
+placed the merged mobile boundaries at the **route level**, and that the mobile nav
+(`MobileNavTabs`) renders in a **separate route tree** in `FinancesApp.tsx` — so a
+route-level boundary does *not* take down the header/nav. I switched to the route-level
+approach: a smaller diff that matches the just-merged convention.
 
 ---
 
 ## Phase III: Implementation
 
-### Implementation Notes — Week 3 Progress
+### What I built
 
-**What I built:** scoped error boundaries around every mobile feature page, so a
-render error is contained to that section (showing a recoverable "Try again"
-fallback) instead of crashing the entire app.
+Route-level scoped error boundaries around the mobile schedules, payees, and bank sync
+routes, so a render error is contained to that section (showing a recoverable "Try again"
+fallback) instead of crashing the entire app — matching the pattern merged for mobile
+budget/accounts/transactions (#8336) and rules.
 
-- **New shared helper** — `packages/desktop-client/src/components/mobile/MobilePageBoundary.tsx`:
-  wraps `ErrorBoundary` with `FallbackComponent={FeatureErrorFallback}` and
-  `resetKeys={[useLocation().pathname]}`, so navigating away clears the error.
-- **Wrapped the mobile feature pages** — transactions, budget, accounts,
-  transaction-edit, schedules, payees, and bank-sync — placing each boundary
-  *inside* the page chrome so `MobilePageHeader` + `MobileNavTabs` stay alive when a
-  section crashes.
-- **Matched existing convention exactly:** no `onError` wiring (the merged
-  precedents don't use it), reused `FeatureErrorFallback`, added no throwaway files.
-
-**Challenges / decisions:**
-- **Boundary placement.** A route-element boundary would have killed the nav bar (the
-  `Page` component portals its header); placing the boundary inside page chrome keeps
-  header + nav interactive — verified per area.
-- **Test needed a router.** The boundary calls `useLocation()`, so
-  `MobilePayeesPage.test.tsx` started failing for lack of router context; I wrapped
-  its render in `<MemoryRouter>`.
-- **Windows lint trap.** `yarn lint:fix` CRLF-rewrites thousands of files on my
-  machine, so I rely on CI's oxlint/oxfmt rather than the local autofix.
+- **Wrapped six routes** in `packages/desktop-client/src/components/FinancesApp.tsx`:
+  `/schedules`, `/schedules/:id`, `/payees`, `/payees/:id`, `/bank-sync`, and
+  `/bank-sync/account/:accountId/edit` — each in
+  `<ErrorBoundary FallbackComponent={FeatureErrorFallback} resetKeys={[location.pathname]}>`.
+- **Reused the shared `FeatureErrorFallback`** and the existing `ErrorBoundary` /
+  `location` imports already in the file. No new components, no new dependencies.
 
 ### Code Changes
 
-- **Branch:** https://github.com/BasilTh/actual/tree/fix-issue-7391 — 8 commits,
-  working tree clean.
-- **Files:** 13 changed (+558 / −498). New `MobilePageBoundary.tsx`; boundaries
-  added to `AccountsPage`, `BudgetPage`, `TransactionListWithBalances`,
-  `TransactionEdit`, `MobileSchedulesPage` + `MobileScheduleEditPage`,
-  `MobilePayeesPage` + `MobilePayeeEditPage`, `MobileBankSyncPage` +
-  `MobileBankSyncAccountEditPage`; test fix in `MobilePayeesPage.test.tsx`; release
-  note `upcoming-release-notes/7391.md`.
-- **Key commits:**
-  - `d01c02b` Add scoped ErrorBoundary to mobile transaction list
-  - `3ac1e3a` Wrap mobile budget page table in a scoped ErrorBoundary
-  - `f9170b3` Wrap mobile accounts list in a scoped ErrorBoundary
-  - `ed12062` Wrap mobile transaction edit in a scoped ErrorBoundary
-  - `2eb8293` Wrap mobile schedules pages in scoped ErrorBoundaries
-  - `33e9941` Wrap mobile payees pages in scoped ErrorBoundaries
-  - `df17193` Wrap mobile bank-sync pages in scoped ErrorBoundaries
-  - `ba4aaba` Add release note for mobile error boundaries
+- **Branch:** https://github.com/BasilTh/actual/tree/fix-7391-mobile-schedules-payees-banksync
+- **Commit:** `27f28f3` — *"fix: add scoped ErrorBoundaries to mobile schedules, payees,
+  and bank sync pages"* (authored as me; no `[AI]` prefix, no Co-Authored-By, per the
+  human-contributor track of the AI-usage policy).
+- **Files:** `packages/desktop-client/src/components/FinancesApp.tsx` (+48 / −12) and a
+  new release note `upcoming-release-notes/mobile-error-boundaries-schedules-payees-banksync.md`.
 
 ### Testing Strategy
 
-- **Manual, per area:** at a mobile viewport, inject a temporary `throw` into each
-  wrapped page → confirm the contained `FeatureErrorFallback` renders while the
-  header/nav stay live → confirm "Try again" (`resetErrorBoundary` keyed on
-  `pathname`) recovers → remove the throw → commit.
-- **Unit:** updated `MobilePayeesPage.test.tsx` to render inside `<MemoryRouter>` so
-  the boundary's `useLocation()` resolves.
-- **Gates (verified locally):** `yarn typecheck` clean across all 10 packages
-  (0 errors); `yarn workspace @actual-app/web run test` green — **42 files, 686
-  passed / 1 skipped / 0 failed**, including the updated `MobilePayeesPage.test.tsx`.
-  `yarn lint` is left to CI (local `lint:fix` CRLF-rewrites the tree on Windows). CI
-  on the PR also runs the 9 `*.mobile.test.ts` Playwright suites (350×600 viewport)
-  and the VRT shards that mobile changes trigger.
+- **Type checking:** `yarn typecheck` passes across all 10 packages (0 errors).
+- **Manual, mobile viewport (primary):** drove the running dev app in a headless browser at
+  a **360×720** mobile viewport on the demo budget. Injected a temporary render `throw`
+  into `MobileSchedulesPage` and confirmed the crash is **contained** — the
+  `FeatureErrorFallback` ("Something went wrong loading this section." + "Try again")
+  renders while the **mobile header and bottom nav stay interactive**, instead of the
+  full-app "Fatal Error." Removed the throw and confirmed the real Schedules list renders
+  normally. (Screenshots captured for the before/after.) Payees and bank sync are the
+  identical route-level wrap.
+- **CI (on the PR):** the mobile Playwright suites and the VRT shards that mobile changes
+  trigger run automatically.
 
 ---
 
 ## Phase IV: Pull Request & Iteration
 
-_In progress (submitting)._
+_In progress — PR opened at [actualbudget/actual #8547](https://github.com/actualbudget/actual/pull/8547); awaiting review._
 
-**Final pre-submission checks (June 30).** Re-verified the branch is review-ready:
-the diff against `upstream/master` is scoped to exactly the intended 13 files
-(+558 / −498) with no stray, debug, or formatting-only changes; `yarn typecheck` is
-clean across all packages and the desktop-client unit suite is green (686 passed /
-1 skipped). The only working-tree noise is Windows CRLF phantoms (no real content
-change), which stay out of the commits.
+**Repo state re-verified before submitting.** After being out sick, I re-fetched
+`upstream/master` and confirmed: `master` had not advanced past my branch base, the three
+mobile routes were still unwrapped, no competing PR touched them, and no one else had
+claimed them on #7391 after me. Then `yarn typecheck` clean (10/10) and the manual mobile
+test above passed.
 
-**One item to resolve before opening.** The branch is now 68 commits behind
-`master`. It still applies cleanly except for a single conflict in
-`mobile/transactions/TransactionEdit.tsx`, which upstream changed since I branched
-(mobile amount-input → calculator #8200, nearby-payee focus fix #8196, append/prepend
-notes on new transactions #8300). Plan: rebase onto the latest `master`, re-resolve
-that one file, and re-test the boundary so the PR opens conflict-free.
+**PR plan.** Open the PR myself as a human contributor (no `[AI]` prefix), filling out the
+project's PR template — Description / Related issue(s) / Testing / Checklist — in my own
+words in English, with an explicit AI-disclosure line per the project's
+[AI-usage policy](https://actualbudget.org/docs/contributing/ai-usage-policy). (The `[AI]`
+prefix and blank-template rules apply to *autonomous* agents; human contributors using AI
+assistance disclose and author the PR themselves.)
 
-**PR plan.** Open the PR personally with a normal title (no `[AI]` prefix), filling
-out the project's PR template — Description / Related issue(s) / Testing / Checklist —
-with a human-written description and an explicit AI-disclosure line per the project's
-[AI-usage policy](https://actualbudget.org/docs/contributing/ai-usage-policy). After
-the PR number exists, rename `upcoming-release-notes/7391.md` → `<PR#>.md` (the repo
-names release notes by PR number). Then keep the branch current with `master` and
-respond to maintainer review personally.
+**PR title:** `Add scoped ErrorBoundaries to mobile schedules, payees, and bank sync pages`
+
+**PR description (draft for GitHub):**
+
+> **Description** — The mobile schedules, payees, and bank sync pages were the remaining
+> entries in the #7391 mobile table without a scoped error boundary; a render error in any
+> of them currently crashes the whole app to the "Fatal Error" screen. This wraps those
+> routes in `FinancesApp.tsx` in an `ErrorBoundary` using the shared `FeatureErrorFallback`
+> with `resetKeys={[location.pathname]}`, so a crash is contained to that section (with a
+> "Try again") while the mobile header and nav stay usable. Same route-level pattern already
+> merged for mobile budget/accounts/transactions (#8336) and rules — no new components or
+> dependencies.
+>
+> *AI disclosure: I used Claude (Anthropic's AI) to help write and review this change. I
+> read through the diff, tested it at a mobile viewport, and verified the behavior myself.*
+>
+> **Related issue(s)** — Relates to #7391 (mobile schedules, payees, and bank sync; the
+> umbrella issue stays open for any remaining areas).
+>
+> **Testing** — At a mobile viewport (360×720) on the demo budget, injected a render error
+> into a wrapped mobile page and confirmed the crash is contained to that section (fallback
+> + "Try again") with the header/nav still interactive, instead of the full-app Fatal Error;
+> removed the throw and confirmed normal rendering. `yarn typecheck` passes (10/10).
+
+**PR Link:** https://github.com/actualbudget/actual/pull/8547
+
+**Maintainer Feedback:** _(pending)_
+
+**Status:** Open ([#8547](https://github.com/actualbudget/actual/pull/8547)) — CI running; awaiting maintainer review.
+
+---
+
+## Learnings & Reflections
+
+- **Check the repo state before you submit.** Two weeks out sick, and part of my original
+  scope had already merged (#8336). Re-verifying `master` turned a would-be redundant PR
+  into a clean, still-needed one — and I did the same check again right before pushing.
+- **Match the merged convention over your first design.** Route-level boundaries were the
+  accepted pattern; switching to them (once I confirmed the mobile nav is a separate route
+  tree, so nav survives) made the change smaller and more mergeable.
+- **Disclose AI use and stay the human in the loop.** The project welcomes AI-assisted work
+  as long as a human understands, tests, and authors the submission — so I verified the
+  behavior myself and wrote the PR in my own words with a disclosure line.
